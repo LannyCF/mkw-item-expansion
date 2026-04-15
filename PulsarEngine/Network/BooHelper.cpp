@@ -20,7 +20,7 @@ ItemId GetNetworkPlayerItem(u8 playerId)
     ItemId storedItem = (ItemId)packet.storedItem;
     u8 mode = packet.mode;
     
-    if (storedItem >= ITEM_NONE) return ITEM_NONE;
+    if (storedItem >= ITEM_MAX) return ITEM_NONE;
 
     if (mode == NET_ITEMSLOT_STATE_STOCK_1 || mode == NET_ITEMSLOT_STATE_STOCK_2 || mode == NET_ITEMSLOT_STATE_STOCK_3) 
         return storedItem;

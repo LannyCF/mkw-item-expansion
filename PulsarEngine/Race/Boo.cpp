@@ -389,7 +389,7 @@ static void CompleteItemSteal(u8 stealerId) {
     if (DriverMgr::isOnlineRace && !mgr->players[stealerId].isRemote) {
         RKNet::ITEMHandler* itemHandler = RKNet::ITEMHandler::sInstance;
         if (itemHandler != nullptr) {
-            itemHandler->SetItem(stealerId, booStolenItem[stealerId]); // Correct count is set in UpdateStoredItem by default afterwards
+            itemHandler->SetItem(stealerId, booStolenItem[stealerId]); // Correct count is set in UpdateStoredItem by default
         }
     }
 
@@ -696,12 +696,12 @@ RaceLoadHook BooReset(ResetBooStates);
 asmFunc EnableBooOpacity() {
     ASM(
     nofralloc;
-    li r5, 0;
+    lwz r3, 0x30 (r3);
     ori r4, r4, 0x1;
     blr;
     )
 }
-kmCall(0x805b15dc, EnableBooOpacity);
+kmCall(0x805b15d8, EnableBooOpacity);
 
 } // namespace Race
 } // namespace Pulsar

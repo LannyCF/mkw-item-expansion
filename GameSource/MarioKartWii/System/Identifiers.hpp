@@ -111,6 +111,7 @@ enum ItemObjId {
     OBJ_NONE = 0x10,
     OBJ_BOO = 0x11,
     OBJ_FEATHER = 0x12
+	OBJ_MAX = 0x13 // Replace with new item obj ID when adding new items, and move this to the next ID
 };
 
 enum ItemId {
@@ -140,7 +141,8 @@ enum ItemId {
     TRIPLE_FIB = 0x17,
     SHROOM_STAR = 0x18,
     GREEN_SHELL_MUSHROOM = 0x19,
-    BOBOMB_MUSHROOM = 0x1A
+    BOBOMB_MUSHROOM = 0x1A    
+	ITEM_MAX = 0x1B // Replace with new item ID when adding new items, and move this to the next ID
 };
 
 enum CourseId {
