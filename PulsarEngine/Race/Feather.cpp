@@ -24,8 +24,13 @@ void UseFeather(Item::Player& itemPlayer) {
     if((status->bitfield1 & 0x4000) != 0) type = 0x2; //if already in a feather, lower vertical velocity (30.0f instead of 50.0 for type 7)
     status->jumpPadType = type;
     status->trickableTimer = 0x4;
-    itemPlayer.inventory.RemoveItems(1);
-    if(DriverMgr::isOnlineRace && itemPlayer.isRemote) Item::Obj::AddUseEVENTEntry(OBJ_BLOOPER, itemPlayer.id);
+
+    if (!itemPlayer.isRemote) 
+    {
+        itemPlayer.inventory.RemoveItems(1);
+        if (DriverMgr::isOnlineRace) Item::Obj::AddUseEVENTEntry(OBJ_FEATHER, itemPlayer.id);
+    }
+
     ResetFeatherSpawnTimer();
 };
 
