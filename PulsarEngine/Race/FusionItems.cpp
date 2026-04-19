@@ -4,8 +4,6 @@
 #include <MarioKartWii/Kart/KartMovement.hpp>
 #include <MarioKartWii/System/Identifiers.hpp>
 #include <MarioKartWii/Item/ItemPlayer.hpp>
-#include <MarioKartWii/Driver/DriverManager.hpp>
-#include <Extensions/ItemExpansion/ItemObjDrop.hpp>
 #include <PulsarSystem.hpp>
 
 // Expanded behaviourTable in mod BSS (from ItemSlotExpansion.cpp)
@@ -14,15 +12,7 @@ extern "C" Item::Behavior expandedBehaviourTable[27];
 namespace Pulsar {
 namespace Race {
 
-static const s16 MUSHROOM_BOOST_DURATION = 90;
-
-static s16 shroomStarCountdown[12] = {};
-
-void SetShroomStarActive(u8 playerId) {
-    if (playerId < 12) {
-        shroomStarCountdown[playerId] = MUSHROOM_BOOST_DURATION;
-    }
-}
+static bool shroomStarActive[12] = {};
 
 void UseShroomerStar(Item::Player& itemPlayer) {
     Kart::Movement* movement = itemPlayer.pointers->kartMovement;
@@ -36,14 +26,10 @@ void UseShroomerStar(Item::Player& itemPlayer) {
 
     u8 playerId = itemPlayer.id;
     if (playerId < 12) {
-        shroomStarCountdown[playerId] = mushroomDuration > 0 ? mushroomDuration : MUSHROOM_BOOST_DURATION;
+        shroomStarActive[playerId] = true;
     }
 
     itemPlayer.inventory.RemoveItems(1);
-
-    if (DriverMgr::isOnlineRace && !itemPlayer.isRemote) {
-        SendEncodedCustomUseEvent(OBJ_SHROOM_STAR, playerId);
-    }
 }
 
 static void UpdateShroomStarStates() {
@@ -51,7 +37,7 @@ static void UpdateShroomStarStates() {
     if (kartMgr == nullptr) return;
 
     for (u32 i = 0; i < 12; i++) {
-        if (shroomStarCountdown[i] <= 0) continue;
+        if (!shroomStarActive[i]) continue;
 
         Kart::Player* kartPlayer = kartMgr->players[i];
         if (kartPlayer == nullptr) continue;
@@ -59,22 +45,18 @@ static void UpdateShroomStarStates() {
         Kart::Movement* movement = kartPlayer->pointers.kartMovement;
         if (movement == nullptr) continue;
 
-        shroomStarCountdown[i]--;
-
-        if (shroomStarCountdown[i] <= 0) {
+        if (movement->boost.mushroomBoostPanelFrames <= 0) {
             movement->starTimer = 0;
-        } else if (movement->starTimer > shroomStarCountdown[i]) {
-            movement->starTimer = shroomStarCountdown[i];
+            shroomStarActive[i] = false;
         }
     }
 }
 
 static void ResetShroomStarStates() {
     for (u32 i = 0; i < 12; i++) {
-        shroomStarCountdown[i] = 0;
+        shroomStarActive[i] = false;
     }
 }
-
 
 void FusionMushroomBoost(Item::Player& itemPlayer) {
     Kart::Movement* movement = itemPlayer.pointers->kartMovement;
@@ -83,14 +65,13 @@ void FusionMushroomBoost(Item::Player& itemPlayer) {
     }
 }
 
-
 static void RegisterFusionItemBehaviours() {
     ResetShroomStarStates();
 
     Item::Behavior& shroomStar = expandedBehaviourTable[SHROOM_STAR];
     shroomStar.unknkown_0x0 = 1;
     shroomStar.unknkown_0x1 = 0;
-    shroomStar.objId = OBJ_MUSHROOM;
+    shroomStar.objId = OBJ_STAR;
     shroomStar.numberOfItems = 1;
     shroomStar.unknown_0xc = 0;
     shroomStar.unknown_0x10 = 0;

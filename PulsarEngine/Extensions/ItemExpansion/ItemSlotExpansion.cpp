@@ -29,8 +29,6 @@ kmCall(0x807baa28, AllocZeroed);
 extern "C" {
     u8 compiledItemSlotBin[3000];
     u32 compiledItemSlotLen = 0;
-    u8 compiledUnknownItemsBin[3000];
-    u32 compiledUnknownItemsLen = 0;
 }
 
 extern "C" void BuildItemSlotBinary() {
@@ -46,31 +44,6 @@ extern "C" void BuildItemSlotBinary() {
         offset += dataSize;
     }
     compiledItemSlotLen = offset;
-}
-
-static const u32 UNKNOWN_ITEMS_PROB = 30;
-extern "C" void BuildUnknownItemsBinary() {
-    u32 offset = 0;
-    compiledUnknownItemsBin[offset++] = (u8)ItemProbs::TABLE_COUNT;
-    for (u32 t = 0; t < ItemProbs::TABLE_COUNT; t++) {
-        const ItemProbs::TableDef& def = ItemProbs::ALL_TABLES[t];
-        u32 cols = def.cols;
-        compiledUnknownItemsBin[offset++] = (u8)cols;
-        compiledUnknownItemsBin[offset++] = (u8)ItemProbs::ITEM_COUNT;
-        u32 dataSize = ItemProbs::ITEM_COUNT * cols;
-        if (t <= 4) {
-            for (u32 item = 0; item < ItemProbs::ITEM_COUNT; item++) {
-                for (u32 col = 0; col < cols; col++) {
-                    bool isActive = (item <= 18 || item == 21 || item == 22 || item == 23 || item == 24 || item == 25 || item == 26);
-                    compiledUnknownItemsBin[offset++] = isActive ? (u8)UNKNOWN_ITEMS_PROB : 0;
-                }
-            }
-        } else {
-            memcpy(&compiledUnknownItemsBin[offset], def.data, dataSize);
-            offset += dataSize;
-        }
-    }
-    compiledUnknownItemsLen = offset;
 }
 
 asmFunc DecideItemTableHook() {
@@ -206,18 +179,6 @@ asmFunc UpdateItemArraysTableHook() {
 kmWrite32(0x8065f778, 0x60000000);
 kmBranch(0x8065f788, UpdateItemArraysTableHook);
 kmPatchExitPoint(UpdateItemArraysTableHook, 0x8065f78c);
-
-asmFunc UpdateItemSumsTableHook() {
-    ASM(
-    nofralloc;
-    lis r31, expandedBehaviourTable @ha;
-    addi r31, r31, expandedBehaviourTable @l;
-    blr;
-    )
-}
-kmWrite32(0x8065e0bc, 0x60000000);  // NOP the lis r31, 0x809c
-kmBranch(0x8065e0d8, UpdateItemSumsTableHook);
-kmPatchExitPoint(UpdateItemSumsTableHook, 0x8065e0dc);
 
 asmFunc ScaleTableCopyHook() {
     ASM(
@@ -514,13 +475,10 @@ kmPatchExitPoint(DecideItemObjCapacityHook, 0x807bb7e0);
 
 static void UpdateItemStatusAndSumsExpanded(RKNet::ITEMHandler* handler) {
     handler->UpdateItemStatusAndSums();
-    // Force all item statuses to ACKED (1). The vanilla function does OOB reads on
-    // the original 19-entry behavior table for expanded item IDs (21+), producing
-    // garbage counts that exceed capacity limits and cause status=2 (NEEDS_ACK/rejected).
-    // Capacity is already enforced at roulette time via ExpandedCapacityCheck, so
-    // the ITEM handshake should always accept the chosen item.
     for (u32 i = 0; i < 12; i++) {
-        handler->itemStatus[i] = 1;
+        if (handler->itemStatus[i] == 0) {
+            handler->itemStatus[i] = 1;
+        }
     }
 }
 kmCall(0x8065c67c, UpdateItemStatusAndSumsExpanded);

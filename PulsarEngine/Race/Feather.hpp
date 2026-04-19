@@ -8,7 +8,6 @@ namespace Pulsar {
 namespace Race {
 
 void UseFeather(Item::Player& itemPlayer);
-void ApplyFeatherRemoteEffect(Item::Player& itemPlayer);
 
 } // namespace Race
 } // namespace Pulsar

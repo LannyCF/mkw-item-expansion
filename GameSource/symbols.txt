@@ -947,7 +947,6 @@ sInstance__12DriverParams = 0x809c191c
 
 #ItemObjHolder
 GetTotalItemCount__Q24Item9ObjHolderCFv = 0x807974ac
-ProcessRecvEVENT__Q24Item9ObjHolderFQ25RKNet11EVENTActionUsRCQ34Item11EVENTBuffer5EntryUib = 0x80796ca0
 
 ##UI
 #SECTION
@@ -1705,8 +1704,6 @@ UpdateServersAsync__Q25RKNet10ControllerFv = 0x80656b44
 
 #PacketMgr
 sInstance__Q25RKNet9PacketMgr = 0x809c1f50
-HasFreeEVENTEntries__Q25RKNet9PacketMgrCFv = 0x80654758
-GetEVENTFreeDataSpace__Q25RKNet9PacketMgrCFv = 0x80654810
 
 #PacketHolder
 Copy__Q25RKNet15PacketHolder<v>FPCvUi = 0x8065a34c
@@ -1733,8 +1730,6 @@ sInstance__Q25RKNet10RH1Handler = 0x809c2118
 AddEntry__Q25RKNet12EVENTHandlerF9ItemObjIdQ25RKNet11EVENTActionPCvUi = 0x8065b780
 HasFreeEntries__Q25RKNet12EVENTHandlerCFv = 0x8065b8d4
 sInstance__Q25RKNet12EVENTHandler = 0x809c20f0
-sInstance__Q24Item11EVENTBuffer = 0x809c3620
-QueueSendEntry__Q24Item11EVENTBufferF9ItemObjIdQ25RKNet11EVENTActionPvUi = 0x8079bfec
 
 #ITEM
 GetStoredItem__Q25RKNet11ITEMHandlerCFUc = 0x8065d21c
@@ -2203,5 +2198,3 @@ DoubleItemsEnd2= 0x80797F08
 DoubleItemsEnd5= 0x807EEFC0
 DoubleItemsEnd6= 0x8081FDB0
 ObjKumo_Update_Epilog = 0x807B07A0
-GetUSEPlayerId__Q24Item11EVENTBufferFRCQ24Item8UseEntry = 0x8079c8e4
-GetEVENTFreeDataSpace__Q25RKNet9PacketMgrCFv = 0x80654810
