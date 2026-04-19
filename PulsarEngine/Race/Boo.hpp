@@ -8,6 +8,7 @@ namespace Pulsar {
 namespace Race {
 
 void UseBoo(Item::Player& itemPlayer);
+void ApplyBooRemoteEffect(u8 playerId);
 bool IsPlayerInBooState(u8 playerId);
 void ResetBooStates();
 

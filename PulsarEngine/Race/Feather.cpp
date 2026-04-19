@@ -6,8 +6,12 @@
 #include <MarioKartWii/CourseMgr.hpp>
 #include <MarioKartWii/Item/ItemBehaviour.hpp>
 #include <MarioKartWii/Item/ItemSlot.hpp>
+#include <MarioKartWii/System/Identifiers.hpp>
 #include <Extensions/ItemExpansion/ItemObjDrop.hpp>
 #include <PulsarSystem.hpp>
+#include <Settings/SettingsParam.hpp>
+#include <MarioKartWii/Archive/ArchiveMgr.hpp>
+#include <MarioKartWii/RKNet/RKNetController.hpp>
 
 // Expanded behaviourTable in mod BSS (from ItemSlotExpansion.cpp)
 extern "C" Item::Behavior expandedBehaviourTable[27];
@@ -25,7 +29,22 @@ void UseFeather(Item::Player& itemPlayer) {
     status->jumpPadType = type;
     status->trickableTimer = 0x4;
     itemPlayer.inventory.RemoveItems(1);
-    if(DriverMgr::isOnlineRace && itemPlayer.isRemote) Item::Obj::AddUseEVENTEntry(OBJ_BLOOPER, itemPlayer.id);
+    if(DriverMgr::isOnlineRace && !itemPlayer.isRemote) SendEncodedCustomUseEvent(OBJ_FEATHER, itemPlayer.id);
+
+    // Reset the Feather spawn timer so it can't be pulled again too quickly
+    ResetFeatherSpawnTimer();
+}
+
+void ApplyFeatherRemoteEffect(Item::Player& itemPlayer) {
+    const Kart::Pointers* pointers = itemPlayer.pointers;
+    pointers->kartMovement->specialFloor |= 0x4;
+
+    Kart::Status* status = pointers->kartStatus;
+    u32 type = 0x7;
+    if ((status->bitfield1 & 0x4000) != 0) type = 0x2;
+    status->jumpPadType = type;
+    status->trickableTimer = 0x4;
+
     ResetFeatherSpawnTimer();
 };
 

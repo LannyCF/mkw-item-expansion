@@ -2,26 +2,14 @@
 #include <MarioKartWii/System/Identifiers.hpp>
 #include <MarioKartWii/RKNet/RKNetController.hpp>
 #include <MarioKartWii/RKNet/ITEM.hpp>
+#include <Network/PacketExpansion.hpp>
 
 namespace Pulsar {
 namespace Network {
 
-// Convert base item + mode to the proper ItemId for triple items
-static ItemId ConvertToFullItemId(ItemId baseItem, u8 mode) {
-    if (mode == 4) {
-        switch (baseItem) {
-            case GREEN_SHELL: return TRIPLE_GREEN_SHELL;
-            case RED_SHELL: return TRIPLE_RED_SHELL;
-            case BANANA: return TRIPLE_BANANA;
-            case MUSHROOM: return TRIPLE_MUSHROOM;
-            default: break;
-        }
-    }
-    return baseItem;
-}
-
 // Get the network item for a remote player
-ItemId GetNetworkPlayerItem(u8 playerId) {
+ItemId GetNetworkPlayerItem(u8 playerId) 
+{
     if (playerId >= 12) return ITEM_NONE;
     
     RKNet::ITEMHandler* handler = RKNet::ITEMHandler::sInstance;
@@ -32,12 +20,31 @@ ItemId GetNetworkPlayerItem(u8 playerId) {
     ItemId storedItem = (ItemId)packet.storedItem;
     u8 mode = packet.mode;
     
-    // Check for no item (mode 0)
-    if (mode == 0) return ITEM_NONE;
-    if (storedItem >= ITEM_NONE) return ITEM_NONE;
+     if (storedItem >= ITEM_MAX) return ITEM_NONE;
+
+    if (mode == NET_ITEMSLOT_STATE_STOCK_1 || mode == NET_ITEMSLOT_STATE_STOCK_2 || mode == NET_ITEMSLOT_STATE_STOCK_3) 
+        return storedItem;
     
-    // Convert to triple if needed
-    return ConvertToFullItemId(storedItem, mode);
+    return ITEM_NONE;
+}
+
+// Get the network item count for a remote player
+int GetNetworkPlayerItemCount(u8 playerId)
+{
+    if (playerId >= 12) return 0;
+    
+    RKNet::ITEMHandler* handler = RKNet::ITEMHandler::sInstance;
+    if (handler == nullptr) return 0;
+    
+    // Read from the received packet
+    const RKNet::ITEMPacket& packet = handler->receivedPackets[playerId];
+    u8 mode = packet.mode;
+
+    if (mode == NET_ITEMSLOT_STATE_STOCK_1) return 1;
+    if (mode == NET_ITEMSLOT_STATE_STOCK_2) return 2;
+    if (mode == NET_ITEMSLOT_STATE_STOCK_3) return 3;
+
+    return 0;
 }
 
 } // namespace Network

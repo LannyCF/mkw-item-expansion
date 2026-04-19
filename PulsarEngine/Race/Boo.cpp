@@ -308,6 +308,20 @@ static ItemId GetPlayerItem(u8 playerId) {
     return Network::GetNetworkPlayerItem(playerId);
 }
 
+static int GetPlayerItemCount(u8 playerId) {
+    Item::Manager* mgr = Item::Manager::sInstance;
+    if (mgr == nullptr || mgr->players == nullptr || playerId >= 12 || playerId >= mgr->playerCount) {
+        return 0;
+    }
+
+    Item::Player& player = mgr->players[playerId];
+
+    if (!player.isRemote) {
+        return player.inventory.currentItemCount;
+    }
+    return Network::GetNetworkPlayerItemCount(playerId);
+}
+
 static void ApplyGhostTransparency(Kart::Pointers& pointers, bool transparent) {
     u32 priority = transparent ? DRAW_OPTIONS_TRANSPARENT : DRAW_OPTIONS_NORMAL;
 
@@ -375,7 +389,7 @@ static void CompleteItemSteal(u8 stealerId) {
     if (DriverMgr::isOnlineRace && !mgr->players[stealerId].isRemote) {
         RKNet::ITEMHandler* itemHandler = RKNet::ITEMHandler::sInstance;
         if (itemHandler != nullptr) {
-            itemHandler->UpdateStoredItem(stealerId);
+            itemHandler->SetItem(stealerId, booStolenItem[stealerId]); // Correct count is set in UpdateStoredItem by default
         }
     }
 
@@ -402,17 +416,20 @@ void UseBoo(Item::Player& itemPlayer) {
     u8 candidateCount = FindPlayersInFront(playerId, candidateIds, 12);
     
     ItemId chosenItem = MUSHROOM;
+    int choosenItemCount = 1;
     u8 victimId = 0xFF;
     
     if (candidateCount > 0) {
         u8 bestVictim = 0xFF;
         u8 bestPosition = 0;
         ItemId bestItem = ITEM_NONE;
+        int bestItemCount = 0;
 
         for (u8 i = 0; i < candidateCount; ++i) {
             u8 candId = candidateIds[i];
             u8 candPosition = GetPlayerPosition(candId);
             ItemId candItem = GetPlayerItem(candId);
+            int candItemCount = GetPlayerItemCount(candId);
 
             if (candItem == ITEM_NONE) continue;
             if (candItem == POW_BLOCK) continue;
@@ -422,16 +439,19 @@ void UseBoo(Item::Player& itemPlayer) {
                 bestVictim = candId;
                 bestPosition = candPosition;
                 bestItem = candItem;
+                bestItemCount = candItemCount;
             }
         }
 
         if (bestVictim != 0xFF && bestItem != ITEM_NONE) {
             victimId = bestVictim;
             chosenItem = bestItem;
+            choosenItemCount = bestItemCount;
         }
     }
 
     booStolenItem[playerId] = chosenItem;
+    booStolenItemCount[playerId] = choosenItemCount;
     booStolenVictim[playerId] = victimId;
 
     if (victimId != 0xFF) {
@@ -440,16 +460,8 @@ void UseBoo(Item::Player& itemPlayer) {
             victimId < itemMgr->playerCount && !itemMgr->players[victimId].isRemote) {
             ItemId victimCur = GetPlayerItem(victimId);
             if (victimCur != ITEM_NONE && victimCur != POW_BLOCK && victimCur != BOO) {
-                booStolenItemCount[playerId] = itemMgr->players[victimId].inventory.currentItemCount;
 
                 itemMgr->players[victimId].inventory.ClearAllAndDestroyDropItems();
-
-                if (DriverMgr::isOnlineRace) {
-                    RKNet::ITEMHandler* itemHandler = RKNet::ITEMHandler::sInstance;
-                    if (itemHandler != nullptr) {
-                        itemHandler->UpdateStoredItem(victimId);
-                    }
-                }
 
                 const RacedataPlayer& victimRacePlayer = Racedata::sInstance->racesScenario.players[victimId];
                 if (victimRacePlayer.playerType == PLAYER_REAL_LOCAL) {
@@ -471,6 +483,81 @@ void UseBoo(Item::Player& itemPlayer) {
     if (DriverMgr::isOnlineRace && !itemPlayer.isRemote) {
         SendEncodedCustomUseEvent(OBJ_BOO, playerId);
     }
+    ResetBooSpawnTimer();
+}
+
+void ApplyBooRemoteEffect(u8 playerId) {
+    if (playerId >= 12 || booActive[playerId] || booStealing[playerId] || booUsed[playerId]) return;
+
+    booUsed[playerId] = true;
+
+    u8 candidateIds[12];
+    u8 candidateCount = FindPlayersInFront(playerId, candidateIds, 12);
+
+    ItemId chosenItem = MUSHROOM;
+    int choosenItemCount = 1;
+    u8 victimId = 0xFF;
+
+    if (candidateCount > 0) {
+        u8 bestVictim = 0xFF;
+        u8 bestPosition = 0;
+        ItemId bestItem = ITEM_NONE;
+        int bestItemCount = 0;
+
+        for (u8 i = 0; i < candidateCount; ++i) {
+            u8 candId = candidateIds[i];
+            u8 candPosition = GetPlayerPosition(candId);
+            ItemId candItem = GetPlayerItem(candId);
+            int candItemCount = GetPlayerItemCount(candId);
+
+            if (candItem == ITEM_NONE) continue;
+            if (candItem == POW_BLOCK) continue;
+            if (candItem == BOO) continue;
+
+            if (candPosition > bestPosition || bestItem == ITEM_NONE) {
+                bestVictim = candId;
+                bestPosition = candPosition;
+                bestItem = candItem;
+                bestItemCount = candItemCount;
+            }
+        }
+
+        if (bestVictim != 0xFF && bestItem != ITEM_NONE) {
+            victimId = bestVictim;
+            chosenItem = bestItem;
+            choosenItemCount = bestItemCount;
+        }
+    }
+
+    booStolenItem[playerId] = chosenItem;
+    booStolenItemCount[playerId] = choosenItemCount;
+    booStolenVictim[playerId] = victimId;
+
+    if (victimId != 0xFF) {
+        Item::Manager* itemMgr = Item::Manager::sInstance;
+        if (itemMgr != nullptr && itemMgr->players != nullptr &&
+            victimId < itemMgr->playerCount && !itemMgr->players[victimId].isRemote) {
+            ItemId victimCur = GetPlayerItem(victimId);
+            if (victimCur != ITEM_NONE && victimCur != POW_BLOCK && victimCur != BOO) {
+                itemMgr->players[victimId].inventory.ClearAllAndDestroyDropItems();
+
+                const RacedataPlayer& victimRacePlayer = Racedata::sInstance->racesScenario.players[victimId];
+                if (victimRacePlayer.playerType == PLAYER_REAL_LOCAL) {
+                    playBooSoundIfAllowed();
+                    ActivateBooVictimScreen(victimId);
+                }
+            }
+        }
+    } else {
+        booStolenItemCount[playerId] = 1;
+    }
+
+    booStealing[playerId] = true;
+    booStealTimers[playerId] = BOO_STEAL_DELAY_FRAMES;
+
+    booActive[playerId] = true;
+    booTimers[playerId] = BOO_DURATION_FRAMES;
+
     ResetBooSpawnTimer();
 }
 
@@ -684,12 +771,12 @@ RaceLoadHook BooReset(ResetBooStates);
 asmFunc EnableBooOpacity() {
     ASM(
     nofralloc;
-    li r5, 0;
+    lwz r3, 0x30 (r3);
     ori r4, r4, 0x1;
     blr;
     )
 }
-kmCall(0x805b15dc, EnableBooOpacity);
+kmCall(0x805b15d8, EnableBooOpacity);
 
 } // namespace Race
 } // namespace Pulsar

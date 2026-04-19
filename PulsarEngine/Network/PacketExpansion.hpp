@@ -145,6 +145,19 @@ public:
 
 u8 GetLastRecvSECTIONSize(u8 aid, u8 sectionIdx);
 ItemId GetNetworkPlayerItem(u8 playerId);
+int GetNetworkPlayerItemCount(u8 playerId);
+
+enum NetworkItemSlotState
+{
+    NET_ITEMSLOT_STATE_EMPTY,
+    NET_ITEMSLOT_STATE_REQUEST,
+    NET_ITEMSLOT_STATE_REQUEST_DONE,
+    NET_ITEMSLOT_STATE_STOPPED,
+    NET_ITEMSLOT_STATE_STOCK_3,
+    NET_ITEMSLOT_STATE_STOCK_2,
+    NET_ITEMSLOT_STATE_STOCK_1,
+    NET_ITEMSLOT_STATE_REQUEST_FAIL
+};
 
 }//namespace Network
 }//namespace Pulsar

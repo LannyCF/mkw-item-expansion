@@ -180,6 +180,18 @@ kmWrite32(0x8065f778, 0x60000000);
 kmBranch(0x8065f788, UpdateItemArraysTableHook);
 kmPatchExitPoint(UpdateItemArraysTableHook, 0x8065f78c);
 
+asmFunc UpdateItemSumsTableHook() {
+    ASM(
+    nofralloc;
+    lis r31, expandedBehaviourTable @ha;
+    addi r31, r31, expandedBehaviourTable @l;
+    blr;
+    )
+}
+kmWrite32(0x8065e0bc, 0x60000000);  // NOP the lis r31, 0x809c
+kmBranch(0x8065e0d8, UpdateItemSumsTableHook);
+kmPatchExitPoint(UpdateItemSumsTableHook, 0x8065e0dc);
+
 asmFunc ScaleTableCopyHook() {
     ASM(
     nofralloc;
@@ -476,9 +488,7 @@ kmPatchExitPoint(DecideItemObjCapacityHook, 0x807bb7e0);
 static void UpdateItemStatusAndSumsExpanded(RKNet::ITEMHandler* handler) {
     handler->UpdateItemStatusAndSums();
     for (u32 i = 0; i < 12; i++) {
-        if (handler->itemStatus[i] == 0) {
-            handler->itemStatus[i] = 1;
-        }
+        handler->itemStatus[i] = 1;
     }
 }
 kmCall(0x8065c67c, UpdateItemStatusAndSumsExpanded);
