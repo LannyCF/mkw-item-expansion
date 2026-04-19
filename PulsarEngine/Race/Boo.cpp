@@ -469,7 +469,7 @@ void UseBoo(Item::Player& itemPlayer) {
     booTimers[playerId] = BOO_DURATION_FRAMES;
 
     if (DriverMgr::isOnlineRace && !itemPlayer.isRemote) {
-        Item::Obj::AddUseEVENTEntry(OBJ_THUNDER_CLOUD, playerId);
+        SendEncodedCustomUseEvent(OBJ_BOO, playerId);
     }
     ResetBooSpawnTimer();
 }
