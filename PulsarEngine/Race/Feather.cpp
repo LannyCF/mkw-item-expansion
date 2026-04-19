@@ -6,8 +6,12 @@
 #include <MarioKartWii/CourseMgr.hpp>
 #include <MarioKartWii/Item/ItemBehaviour.hpp>
 #include <MarioKartWii/Item/ItemSlot.hpp>
+#include <MarioKartWii/System/Identifiers.hpp>
 #include <Extensions/ItemExpansion/ItemObjDrop.hpp>
 #include <PulsarSystem.hpp>
+#include <Settings/SettingsParam.hpp>
+#include <MarioKartWii/Archive/ArchiveMgr.hpp>
+#include <MarioKartWii/RKNet/RKNetController.hpp>
 
 // Expanded behaviourTable in mod BSS (from ItemSlotExpansion.cpp)
 extern "C" Item::Behavior expandedBehaviourTable[27];
@@ -24,26 +28,50 @@ void UseFeather(Item::Player& itemPlayer) {
     if((status->bitfield1 & 0x4000) != 0) type = 0x2; //if already in a feather, lower vertical velocity (30.0f instead of 50.0 for type 7)
     status->jumpPadType = type;
     status->trickableTimer = 0x4;
-    itemPlayer.inventory.RemoveItems(1);
-    if(DriverMgr::isOnlineRace && itemPlayer.isRemote) Item::Obj::AddUseEVENTEntry(OBJ_BLOOPER, itemPlayer.id);
-    ResetFeatherSpawnTimer();
-};
 
-//kmWrite32(0x805b68d8, 0x7DE97B78); //mr r9, r15 to get playercollision
+    itemPlayer.inventory.RemoveItems(1);
+
+    if(DriverMgr::isOnlineRace && !itemPlayer.isRemote) SendEncodedCustomUseEvent(OBJ_FEATHER, itemPlayer.id);
+
+    // Reset the Feather spawn timer so it can't be pulled again too quickly
+    ResetFeatherSpawnTimer();
+}
+
+void ApplyFeatherRemoteEffect(Item::Player& itemPlayer) {
+    const Kart::Pointers* pointers = itemPlayer.pointers;
+    pointers->kartMovement->specialFloor |= 0x4;
+
+    Kart::Status* status = pointers->kartStatus;
+    u32 type = 0x7;
+    if ((status->bitfield1 & 0x4000) != 0) type = 0x2;
+    status->jumpPadType = type;
+    status->trickableTimer = 0x4;
+
+    ResetFeatherSpawnTimer();
+}
+
+kmWrite32(0x805b68d8, 0x7DE97B78); //mr r9, r15 to get playercollision
 static bool ConditionalIgnoreInvisibleWalls(float radius, CourseMgr& mgr, const Vec3& position, const Vec3& prevPosition,
-    KCLBitfield acceptedFlags, CollisionInfo* info, KCLTypeHolder& kclFlags) {
-        register Kart::Collision* collision;
-        asm(mr collision, r15;);
-        Kart::Status* status = collision->pointers->kartStatus;
-        if(status->bitfield0 & 0x40000000 && status->jumpPadType == 0x7) {
-            acceptedFlags = static_cast<KCLBitfield>(acceptedFlags & ~(1 << KCL_INVISIBLE_WALL));
-        }
-        //to remove invisible walls from the list of flags checked, these walls at flag 0xD and 2^0xD = 0x2000*
+    KCLBitfield acceptedFlags, CollisionInfo* info, KCLTypeHolder& kclFlags)
+{
+bool InvisWalls = System::sInstance->IsContext(PULSAR_INVISWALLS) == Pulsar::DKWSETTING_INVISWALLS_DISABLED;
+const RacedataScenario& scenario = Racedata::sInstance->racesScenario;
+const GameMode mode = scenario.settings.gamemode;
+const GameMode gameMode = Racedata::sInstance->menusScenario.settings.gamemode;
+if (RKNet::Controller::sInstance->roomType == RKNet::ROOMTYPE_FROOM_HOST || RKNet::Controller::sInstance->roomType == RKNet::ROOMTYPE_FROOM_NONHOST || gameMode == MODE_GRAND_PRIX || gameMode == MODE_VS_RACE || gameMode == MODE_BATTLE) {
+    InvisWalls = System::sInstance->IsContext(PULSAR_INVISWALLS) == Pulsar::DKWSETTING_INVISWALLS_DISABLED;
+}
+    if (InvisWalls == Pulsar::DKWSETTING_INVISWALLS_DISABLED && mode != MODE_TIME_TRIAL && mode != MODE_GHOST_RACE) {
+        acceptedFlags = static_cast<KCLBitfield>(acceptedFlags & ~(1 << KCL_INVISIBLE_WALL));
+    }
     return mgr.IsCollidingAddEntry(position, prevPosition, acceptedFlags, info, &kclFlags, 0, radius);
 }
 kmCall(0x805b68dc, ConditionalIgnoreInvisibleWalls);
 
 u8 ConditionalFastFallingBody(const Kart::Sub& sub) {
+const RacedataScenario& scenario = Racedata::sInstance->racesScenario;
+const GameMode mode = scenario.settings.gamemode;
+const GameMode gameMode = Racedata::sInstance->menusScenario.settings.gamemode;
         const Kart::PhysicsHolder& physicsHolder = sub.GetPhysicsHolder();
         const Kart::Status* status = sub.pointers->kartStatus;
         if(status->bitfield0 & 0x40000000 && status->jumpPadType == 0x7 && status->airtime >= 2 && (!status->bool_0x97 || status->airtime > 19)) {
@@ -56,8 +84,10 @@ u8 ConditionalFastFallingBody(const Kart::Sub& sub) {
 }
 kmCall(0x805967ac, ConditionalFastFallingBody);
 
-
 void ConditionalFastFallingWheels(float unk_float, Kart::WheelPhysicsHolder* wheelPhysicsHolder, Vec3& gravityVector, const Mtx34& wheelMat) {
+const RacedataScenario& scenario = Racedata::sInstance->racesScenario;
+const GameMode mode = scenario.settings.gamemode;
+const GameMode gameMode = Racedata::sInstance->menusScenario.settings.gamemode;
         Kart::Status* status = wheelPhysicsHolder->pointers->kartStatus;
         if(status->bitfield0 & 0x40000000 && status->jumpPadType == 0x7) {
             if(status->airtime == 0) status->bool_0x97 = ((status->bitfield0 & 0x80) != 0) ? true : false;

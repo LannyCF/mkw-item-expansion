@@ -5,6 +5,8 @@
 #include <MarioKartWii/System/Identifiers.hpp>
 #include <MarioKartWii/3D/Model/ModelDirector.hpp>
 
+// Please make sure to credit SaucyCF (Saucy on Tockdom) if you decide to use or modify this code in your own project!
+
 namespace Pulsar {
 namespace Race {
 
@@ -53,6 +55,8 @@ u32 GetFeatherSpawnTimer();
 void ResetBooSpawnTimer();
 void ResetFeatherSpawnTimer();
 void UpdateSpawnTimers();
+void SendEncodedCustomUseEvent(ItemObjId realObjId, u8 playerId);
+void SetShroomStarActive(u8 playerId);
 
 } // namespace Race
 } // namespace Pulsar

@@ -2,6 +2,9 @@
 #include <MarioKartWii/Item/ItemManager.hpp>
 #include <MarioKartWii/Item/ItemBehaviour.hpp>
 #include <MarioKartWii/Item/ItemSlot.hpp>
+#include <MarioKartWii/Item/Obj/ItemObjHolder.hpp>
+#include <MarioKartWii/Item/Obj/ItemEVENT.hpp>
+#include <MarioKartWii/RKNet/EVENT.hpp>
 #include <MarioKartWii/Kart/KartManager.hpp>
 #include <MarioKartWii/Archive/ArchiveMgr.hpp>
 #include <MarioKartWii/Race/RaceInfo/RaceInfo.hpp>
