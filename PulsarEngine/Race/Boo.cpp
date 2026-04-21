@@ -348,6 +348,14 @@ static void ApplyGhostTransparency(Kart::Pointers& pointers, bool transparent) {
             driver->toadetteHair->cb->hair != nullptr && HasValidVtable(driver->toadetteHair->cb->hair)) {
             driver->toadetteHair->cb->hair->UpdateDrawPriority(priority);
         }
+        u32 mdlCount = driver->mdlDirectorsCount;
+        if (mdlCount > 6) mdlCount = 6;
+        for (u32 modelIndex = 0; modelIndex < mdlCount; ++modelIndex) {
+            ModelDirector* model = driver->mdlDirectors[modelIndex];
+            if (model != nullptr && HasValidVtable(model)) {
+                model->UpdateDrawPriority(priority);
+            }
+        }
     }
 
     if (pointers.values != nullptr && pointers.wheels != nullptr) {
