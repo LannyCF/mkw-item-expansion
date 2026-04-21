@@ -18,12 +18,39 @@ namespace Pulsar {
 namespace Race {
 
 static const u8 CUSTOM_EVENT_MAGIC = 0xFF;
+static const u8 CUSTOM_EVENT_FLAG_DROP = 0x80;
 
 void SendEncodedCustomUseEvent(ItemObjId realObjId, u8 playerId) {
     u8 encodedData[3];
     encodedData[0] = CUSTOM_EVENT_MAGIC;
     encodedData[1] = (u8)realObjId;
     encodedData[2] = playerId;
+
+    RKNet::PacketMgr* mgr = RKNet::PacketMgr::sInstance;
+    if (mgr != nullptr && mgr->GetEVENTFreeDataSpace() >= 3 && mgr->HasFreeEVENTEntries()) {
+        mgr->AddEVENTEntry(OBJ_MUSHROOM, RKNet::EVENTACTION_USE, encodedData, 3);
+    } else {
+        Item::EVENTBuffer* evtBuf = Item::EVENTBuffer::sInstance;
+        if (evtBuf != nullptr) {
+            evtBuf->QueueSendEntry(OBJ_MUSHROOM, RKNet::EVENTACTION_USE, encodedData, 3);
+        }
+    }
+}
+
+void SendEncodedCustomDropEvent(ItemId dropType, u8 playerId) {
+    ItemObjId realObjId;
+    if (dropType == BOO) {
+        realObjId = OBJ_BOO;
+    } else if (dropType == FEATHER) {
+        realObjId = OBJ_FEATHER;
+    } else {
+        return;
+    }
+
+    u8 encodedData[3];
+    encodedData[0] = CUSTOM_EVENT_MAGIC;
+    encodedData[1] = (u8)realObjId;
+    encodedData[2] = (playerId & 0x7F) | CUSTOM_EVENT_FLAG_DROP;
 
     RKNet::PacketMgr* mgr = RKNet::PacketMgr::sInstance;
     if (mgr != nullptr && mgr->GetEVENTFreeDataSpace() >= 3 && mgr->HasFreeEVENTEntries()) {
@@ -43,10 +70,31 @@ static bool InterceptCustomRecvEVENT(Item::ObjHolder* holder, RKNet::EVENTAction
     if (objId == OBJ_MUSHROOM && action == RKNet::EVENTACTION_USE
         && entry.data[0] == CUSTOM_EVENT_MAGIC) {
         ItemObjId realObjId = (ItemObjId)entry.data[1];
-        u8 playerId = entry.data[2];
+        const u8 encodedPlayerData = entry.data[2];
+        const bool isDropEvent = (encodedPlayerData & CUSTOM_EVENT_FLAG_DROP) != 0;
+        u8 playerId = encodedPlayerData & 0x7F;
         if (realObjId > OBJ_NONE) {
             Item::Manager* mgr = Item::Manager::sInstance;
             if (mgr == nullptr || playerId >= mgr->playerCount) return false;
+
+            if (isDropEvent) {
+                // Ignore locally-authored drops on this console; they are already spawned locally.
+                if (!mgr->players[playerId].isRemote) return false;
+
+                ItemId dropType = ITEM_NONE;
+                if (realObjId == OBJ_BOO) {
+                    dropType = BOO;
+                } else if (realObjId == OBJ_FEATHER) {
+                    dropType = FEATHER;
+                }
+
+                if (dropType != ITEM_NONE) {
+                    const Vec3& position = mgr->players[playerId].GetPosition();
+                    EjectDroppedItem(dropType, position, playerId);
+                }
+                return false;
+            }
+
             Item::Player& player = mgr->players[playerId];
             switch (realObjId) {
                 case OBJ_BOO:

@@ -56,6 +56,7 @@ void ResetBooSpawnTimer();
 void ResetFeatherSpawnTimer();
 void UpdateSpawnTimers();
 void SendEncodedCustomUseEvent(ItemObjId realObjId, u8 playerId);
+void SendEncodedCustomDropEvent(ItemId dropType, u8 playerId);
 void SetShroomStarActive(u8 playerId);
 
 } // namespace Race
