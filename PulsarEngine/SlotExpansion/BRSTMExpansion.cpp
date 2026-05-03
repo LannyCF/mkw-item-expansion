@@ -4,7 +4,7 @@
 #include <Sound/MiscSound.hpp>
 #include <SlotExpansion/CupsConfig.hpp>
 #include <SlotExpansion/UI/ExpansionUIMisc.hpp>
-#include <DKW.hpp>
+#include <PackName.hpp>
 
 
 namespace Pulsar {
