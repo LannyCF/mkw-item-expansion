@@ -1,4 +1,6 @@
 # Item Expansion for Pulsar/Pulladium
+DISCLAIMER: This project is completely coded by AI.
+
 This project is MIT.
 
 NOTE: The "Shroom Star" (Lion's Dash) is not permitted to be used without permission of the author in your modpack. To contact them, Add "ImZeraora" on Discord and send them a DM asking for permission.
